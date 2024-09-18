@@ -9,18 +9,22 @@ struct Stuff {
     Node!Stuff phnode;
 }
 
-	static ptrdiff_t stuffCmp(Stuff* lhs, Stuff* rhs) {
-		auto l = cast(size_t) lhs;
-		auto r = cast(size_t) rhs;
+int numComparisons = 0;
 
-		return (lhs.value == rhs.value)
-			? (l > r) - (l < r)
-			: (lhs.value - rhs.value);
-	}
+ptrdiff_t stuffCmp(Stuff* lhs, Stuff* rhs) {
+    auto l = cast(size_t) lhs;
+    auto r = cast(size_t) rhs;
+    ++numComparisons;
+
+    return (lhs.value == rhs.value)
+        ? (l > r) - (l < r)
+        : (lhs.value - rhs.value);
+}
 
 enum CSIZE = 24;
 enum FSIZE = 12;
 int drawNode(Stuff* stuff) {
+    if(stuff is null) return 0;
     int depth = 0;
     DrawCircle(CSIZE, CSIZE, CSIZE - 2, Colors.LIGHTGRAY);
     auto txt = TextFormat("%d", stuff.value);
@@ -63,15 +67,27 @@ void main()
 
     auto nodes = stuffs[];
     import std.range;
+    int numOps;
     void insertNext() {
         if(nodes.empty)
             return;
+        ++numOps;
         theHeap.insert(&nodes.front());
         nodes.popFront;            
     }
+
+    void reset() {
+        theHeap.clear();
+        numComparisons = 0;
+        numOps = 0;
+    }
+
     insertNext();
 
     InitWindow(800, 800, "Heap demo");
+
+    SetTargetFPS(60);
+
     while(!WindowShouldClose())
     {
         import std.algorithm;
@@ -83,13 +99,13 @@ void main()
         }
         if(IsKeyPressed(KeyboardKey.KEY_X))
         {
-            theHeap.clear();
+            reset();
             nodes = stuffs[];
             insertNext();
         }
         if(IsKeyPressed(KeyboardKey.KEY_R))
         {
-            theHeap.clear();
+            reset();
             nodes = stuffs[];
             nodes[].map!(function ref ulong(ref Stuff v) => v.value).randomShuffle;
             insertNext();
@@ -100,23 +116,27 @@ void main()
         }
         if(IsKeyPressed(KeyboardKey.KEY_O))
         {
-            theHeap.clear();
+            reset();
+            nodes = stuffs[];
             nodes[].map!(function ref ulong(ref Stuff v) => v.value).sort;
             insertNext();
         }
         if(IsKeyPressed(KeyboardKey.KEY_I))
         {
-            theHeap.clear();
+            reset();
+            nodes = stuffs[];
             nodes[].map!(function ref ulong(ref Stuff v) => v.value).sort!((a, b) => a > b);
             insertNext();
         }
         if(IsKeyPressed(KeyboardKey.KEY_P))
         {
+            ++numOps;
             theHeap.pop();
         }
 
         ClearBackground(Colors.WHITE);
-
+        auto txt = TextFormat("Cmp: %d Ops: %d", numComparisons, numOps);
+        DrawText(txt, GetScreenWidth() - 10 - MeasureText(txt, 20), 10, 20, Colors.BLACK);
         drawNode(theHeap.top);
     }
 }
